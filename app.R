@@ -146,15 +146,14 @@ ui <- fluidPage(
                            #strong("Please specify the column names identifying the following variables:"),
                            # Input: Name of appropriate headers
                            selectInput(inputId = "input_Age_name", label="a", choices = ""),
-                           selectInput(inputId = "input_Temp_name", label="a", choices = ""),
                            selectInput(inputId = "input_HR_name", label="a", choices = ""),
                            selectInput(inputId = "input_MUAC_name", label="a", choices = ""),
                            selectInput(inputId = "input_OxySat_name", label="a", choices = ""),
-                           selectInput(inputId = "input_Convulsions_name", label="a", choices = ""),
-                           conditionalPanel(condition = "input.input_Convulsions_name!=''",
+                           selectInput(inputId = "input_Lethargy_name", label="a", choices = ""),
+                           conditionalPanel(condition = "input.input_Lethargy_name!=''",
                                             p("Select the value that codes for..."),
-                                            selectInput(inputId = "convNoLabel", label="No", choices = "", width = '70%'),
-                                            selectInput(inputId = "convYesLabel", label="Yes", choices = "", width = '70%')
+                                            selectInput(inputId = "lethNoLabel", label="No", choices = "", width = '70%'),
+                                            selectInput(inputId = "lethYesLabel", label="Yes", choices = "", width = '70%')
                            ),
                            # If choice is 'validation'
                            conditionalPanel(condition = "input.choice == 'validation'",
@@ -180,11 +179,10 @@ ui <- fluidPage(
                        
                          # Input: Name of appropriate headers
                          sliderInput(inputId = "input_Age", label="Age (in days)", min=30, max=1826, value=365, step=1),
-                         sliderInput(inputId = "input_Temp", label="Axillary temperature (in Celsius)", min=33, max=42, value=37, step=0.1),
                          sliderInput(inputId = "input_HR", label="Heart rate (in beats/min)", min=20, max=350, value=100, step=1),
                          sliderInput(inputId = "input_MUAC", label="MUAC (in cm)", min=8, max=20, value=20, step=0.1),
                          sliderInput(inputId = "input_OxySat", label="Oxygen saturation (in %)", min=30, max=100, value=100, step=1),
-                         radioButtons(inputId = "input_Convulsions", label="Convulsions", choices = list("No"=0, "Yes"=1), inline=TRUE),
+                         radioButtons(inputId = "input_Lethargy", label="Lethargy", choices = list("No"=0, "Yes"=1), inline=TRUE),
                          actionButton(inputId = "input_submit", label = "Calculate probability value")
       ), # Finishes if choice is 'one'
     ),
@@ -264,20 +262,19 @@ server <- function(input, output, session) {
     numvars <- c("", varnames)
     facvars <- c("", varnames)
     updateSelectInput(session, inputId = "input_Age_name", label="Age (in days)", choices = numvars)
-    updateSelectInput(session, inputId = "input_Temp_name", label=HTML("Axillary temperature (in Celsius):"), choices = numvars)
     updateSelectInput(session, inputId = "input_HR_name", label="Heart rate (in beats/min)", choices = numvars)
     updateSelectInput(session, inputId = "input_MUAC_name", label="MUAC (in cm)", choices = numvars)
     updateSelectInput(session, inputId = "input_OxySat_name", label="Oxygen saturation (in %)", choices = numvars)
-    updateSelectInput(session, inputId = "input_Convulsions_name", label="Convulsions", choices = facvars)
+    updateSelectInput(session, inputId = "input_Lethargy_name", label="Lethargy", choices = facvars)
     updateSelectInput(session, inputId = "input_Death_name", label="Mortality", choices = facvars)
   })
 
-  observeEvent(input$input_Convulsions_name, {
-    if(input$input_Convulsions_name!="") {
+  observeEvent(input$input_Lethargy_name, {
+    if(input$input_Lethargy_name!="") {
       DS <- get_DS()
-      chs <- c("", levels(as.factor(DS[,input$input_Convulsions_name])))
-      updateSelectInput(session, inputId = "convNoLabel", label="No", choices = chs)
-      updateSelectInput(session, inputId = "convYesLabel", label="Yes", choices = chs)
+      chs <- c("", levels(as.factor(DS[,input$input_Lethargy_name])))
+      updateSelectInput(session, inputId = "lethNoLabel", label="No", choices = chs)
+      updateSelectInput(session, inputId = "lethYesLabel", label="Yes", choices = chs)
     }
   })
 
@@ -295,37 +292,37 @@ server <- function(input, output, session) {
     if(input$choice == "many") {
       validate(need(length(input$dataset$name)>0, "Please load your dataset."))
       validate(
-        need(nchar(input$input_Age_name)>0 & nchar(input$input_Temp_name)>0 & nchar(input$input_HR_name)>0 & nchar(input$input_MUAC_name)>0 & 
-               nchar(input$input_OxySat_name)>0 & nchar(input$input_Convulsions_name)>0, 
+        need(nchar(input$input_Age_name)>0 & nchar(input$input_HR_name)>0 & nchar(input$input_MUAC_name)>0 & 
+               nchar(input$input_OxySat_name)>0 & nchar(input$input_Lethargy_name)>0, 
              paste("Please specify the column names identifying each variable"))
       )
       validate(
-        need(length(unique(c(input$input_Age_name, input$input_Temp_name, input$input_HR_name, input$input_MUAC_name, 
-                             input$input_OxySat_name, input$input_Convulsions_name)))==6, 
+        need(length(unique(c(input$input_Age_name, input$input_HR_name, input$input_MUAC_name, 
+                             input$input_OxySat_name, input$input_Lethargy_name)))==5, 
              paste("The same column name can not be indicated for two variables."))
       )
-      validate(need(nchar(input$convNoLabel)>0 & nchar(input$convYesLabel)>0, "Please specify the labels that identify if there are convulsions or not."))
+      validate(need(nchar(input$lethNoLabel)>0 & nchar(input$lethYesLabel)>0, "Please specify the labels that identify if there was lethargy or not."))
       validate(
-        need(length(unique(c(input$convNoLabel, input$convYesLabel)))==2, 
-             paste("The same label can not be indicated for both conditions (convulsions yes/no)."))
+        need(length(unique(c(input$lethNoLabel, input$lethYesLabel)))==2, 
+             paste("The same label can not be indicated for both conditions (lethargy yes/no)."))
       )
       
     } else if(input$choice == "validation") {
       validate(need(length(input$dataset$name)>0, "Please load your dataset."))
       validate(
-        need(nchar(input$input_Age_name)>0 & nchar(input$input_Temp_name)>0 & nchar(input$input_HR_name)>0 & nchar(input$input_MUAC_name)>0 & 
-               nchar(input$input_OxySat_name)>0 & nchar(input$input_Convulsions_name)>0 & nchar(input$input_Death_name)>0, 
+        need(nchar(input$input_Age_name)>0 & nchar(input$input_HR_name)>0 & nchar(input$input_MUAC_name)>0 & 
+               nchar(input$input_OxySat_name)>0 & nchar(input$input_Lethargy_name)>0 & nchar(input$input_Death_name)>0, 
              paste("Please specify the column names identifying each variable"))
       )
       validate(
-        need(length(unique(c(input$input_Age_name, input$input_Temp_name, input$input_HR_name, input$input_MUAC_name, 
-                             input$input_OxySat_name, input$input_Convulsions_name, input$input_Death_name)))==7, 
+        need(length(unique(c(input$input_Age_name, input$input_HR_name, input$input_MUAC_name, 
+                             input$input_OxySat_name, input$input_Lethargy_name, input$input_Death_name)))==6, 
              paste("The same column name can not be indicated for two variables."))
       )
-      validate(need(nchar(input$convNoLabel)>0 & nchar(input$convYesLabel)>0, "Please specify the labels that identify if there are convulsions or not."))
+      validate(need(nchar(input$lethNoLabel)>0 & nchar(input$lethYesLabel)>0, "Please specify the labels that identify if there was lethargy or not."))
       validate(
-        need(length(unique(c(input$convNoLabel, input$convYesLabel)))==2, 
-             paste("The same label can not be indicated for both conditions (convulsions yes/no)."))
+        need(length(unique(c(input$lethNoLabel, input$lethYesLabel)))==2, 
+             paste("The same label can not be indicated for both conditions (lethargy yes/no)."))
       )
       validate(need(nchar(input$deathNoLabel)>0 & nchar(input$deathYesLabel)>0, "Please specify the labels that identify if the subject died or not."))
       validate(
@@ -341,22 +338,22 @@ server <- function(input, output, session) {
       if (input$choice == 'many') {
         validate(
           need(length(input$dataset$name)>0, FALSE),
-          need(nchar(input$input_Age_name)>0 & nchar(input$input_Temp_name)>0 & nchar(input$input_HR_name)>0 & nchar(input$input_MUAC_name)>0 & 
-                 nchar(input$input_OxySat_name)>0 & nchar(input$input_Convulsions_name)>0, FALSE),
-          need(length(unique(c(input$input_Age_name, input$input_Temp_name, input$input_HR_name, input$input_MUAC_name, 
-                               input$input_OxySat_name, input$input_Convulsions_name)))==6, FALSE),
-          need(nchar(input$convNoLabel)>0 & nchar(input$convYesLabel)>0, FALSE),
-          need(length(unique(c(input$convNoLabel, input$convYesLabel)))==2, FALSE)
+          need(nchar(input$input_Age_name)>0 & nchar(input$input_HR_name)>0 & nchar(input$input_MUAC_name)>0 & 
+                 nchar(input$input_OxySat_name)>0 & nchar(input$input_Lethargy_name)>0, FALSE),
+          need(length(unique(c(input$input_Age_name, input$input_HR_name, input$input_MUAC_name, 
+                               input$input_OxySat_name, input$input_Lethargy_name)))==5, FALSE),
+          need(nchar(input$lethNoLabel)>0 & nchar(input$lethYesLabel)>0, FALSE),
+          need(length(unique(c(input$lethNoLabel, input$lethYesLabel)))==2, FALSE)
         )
       } else if (input$choice == 'validation') {
         validate(
           need(length(input$dataset$name)>0, FALSE),
-          need(nchar(input$input_Age_name)>0 & nchar(input$input_Temp_name)>0 & nchar(input$input_HR_name)>0 & nchar(input$input_MUAC_name)>0 & 
-                 nchar(input$input_OxySat_name)>0 & nchar(input$input_Convulsions_name)>0 & nchar(input$input_Death_name)>0, FALSE),
-          need(length(unique(c(input$input_Age_name, input$input_Temp_name, input$input_HR_name, input$input_MUAC_name, 
-                               input$input_OxySat_name, input$input_Convulsions_name, input$input_Death_name)))==7, FALSE),
-          need(nchar(input$convNoLabel)>0 & nchar(input$convYesLabel)>0, FALSE),
-          need(length(unique(c(input$convNoLabel, input$convYesLabel)))==2, FALSE),
+          need(nchar(input$input_Age_name)>0 & nchar(input$input_HR_name)>0 & nchar(input$input_MUAC_name)>0 & 
+                 nchar(input$input_OxySat_name)>0 & nchar(input$input_Lethargy_name)>0 & nchar(input$input_Death_name)>0, FALSE),
+          need(length(unique(c(input$input_Age_name, input$input_HR_name, input$input_MUAC_name, 
+                               input$input_OxySat_name, input$input_Lethargy_name, input$input_Death_name)))==6, FALSE),
+          need(nchar(input$lethNoLabel)>0 & nchar(input$lethYesLabel)>0, FALSE),
+          need(length(unique(c(input$lethNoLabel, input$lethYesLabel)))==2, FALSE),
           need(nchar(input$deathNoLabel)>0 & nchar(input$deathYesLabel)>0, FALSE),
           need(length(unique(c(input$deathNoLabel, input$deathYesLabel)))==2, FALSE)
         )
@@ -373,11 +370,11 @@ server <- function(input, output, session) {
                    # header = input$header,
                    # sep = input$sep,
                    # quote = input$quote)
-    cnv <- rep(NA, nrow(df))
-    cnv[which(df[[input$input_Convulsions_name]] == input$convNoLabel)] <- 0
-    cnv[which(df[[input$input_Convulsions_name]] == input$convYesLabel)] <- 1
-    cnv <- as.factor(cnv)
-    levels(cnv) <- c("No", "Yes")
+    Lethargy <- rep(NA, nrow(df))
+    Lethargy[which(df[[input$input_Lethargy_name]] == input$lethNoLabel)] <- 0
+    Lethargy[which(df[[input$input_Lethargy_name]] == input$lethYesLabel)] <- 1
+    Lethargy <- as.factor(Lethargy)
+    levels(Lethargy) <- c("No", "Yes")
     
     if(input$choice == 'validation') {
       dth <- rep(NA, nrow(df))
@@ -386,19 +383,17 @@ server <- function(input, output, session) {
       dth <- as.factor(dth)
       levels(dth) <- c("No", "Yes")
       ws <- data.frame(Age = df[[input$input_Age_name]],
-                       Temp = df[[input$input_Temp_name]],
                        Heart.Rate = df[[input$input_HR_name]],
                        MUAC = df[[input$input_MUAC_name]],
                        Oxy.Sat = df[[input$input_OxySat_name]],
-                       Convulsions = cnv,
+                       Lethargy = Lethargy,
                        Death = dth)
     } else if(input$choice == 'many') {
       ws <- data.frame(Age = df[[input$input_Age_name]],
-                       Temp = df[[input$input_Temp_name]],
                        Heart.Rate = df[[input$input_HR_name]],
                        MUAC = df[[input$input_MUAC_name]],
                        Oxy.Sat = df[[input$input_OxySat_name]],
-                       Convulsions = cnv)
+                       Lethargy = Lethargy)
     }
     
     return(ws)
@@ -424,37 +419,33 @@ server <- function(input, output, session) {
   output$description <- renderTable({
     WS <- get_WS()
     if (input$choice == 'many') {
-      conv.table <- table(WS$Convulsions, useNA="always")
-      ct <- paste0(names(conv.table), ": ", conv.table, " (", round(conv.table/sum(conv.table), 1), "%)")
+      leth.table <- table(WS$Lethargy, useNA="always")
+      ct <- paste0(names(leth.table), ": ", leth.table, " (", round(leth.table/sum(leth.table), 1), "%)")
       varnames <- names(WS)
       means <- c(paste0(round(mean(WS$Age), 2), " (", round(sd(WS$Age), 2), ")"),
-                 paste0(round(mean(WS$Temp), 2), " (", round(sd(WS$Temp), 2), ")"),
                  paste0(round(mean(WS$Heart.Rate), 2), " (", round(sd(WS$Heart.Rate), 2), ")"),
                  paste0(round(mean(WS$MUAC), 2), " (", round(sd(WS$MUAC), 2), ")"),
                  paste0(round(mean(WS$Oxy.Sat), 2), " (", round(sd(WS$Oxy.Sat), 2), ")"),
                  paste0(ct[1], "; ", ct[2]))
       nas <- c(sum(is.na(WS$Age)),
-               sum(is.na(WS$Temp)),
                sum(is.na(WS$Heart.Rate)),
                sum(is.na(WS$MUAC)),
                sum(is.na(WS$Oxy.Sat)),
                ct[3])
       description.table <- data.frame(Variable = varnames, Summary=means, Missings = nas)
     } else if (input$choice == 'validation') {
-      conv.table <- table(WS$Convulsions, useNA="always")
-      ct <- paste0(names(conv.table), ": ", conv.table, " (", round(conv.table/sum(conv.table), 1), "%)")
+      leth.table <- table(WS$Lethargy, useNA="always")
+      ct <- paste0(names(leth.table), ": ", leth.table, " (", round(leth.table/sum(leth.table), 1), "%)")
       death.table <- table(WS$Death, useNA="always")
       dt <- paste0(names(death.table), ": ", death.table, " (", round(death.table/sum(death.table), 1), "%)")
       varnames <- names(WS)
       means <- c(paste0(round(mean(WS$Age), 2), " (", round(sd(WS$Age), 2), ")"),
-                 paste0(round(mean(WS$Temp), 2), " (", round(sd(WS$Temp), 2), ")"),
                  paste0(round(mean(WS$Heart.Rate), 2), " (", round(sd(WS$Heart.Rate), 2), ")"),
                  paste0(round(mean(WS$MUAC), 2), " (", round(sd(WS$MUAC), 2), ")"),
                  paste0(round(mean(WS$Oxy.Sat), 2), " (", round(sd(WS$Oxy.Sat), 2), ")"),
                  paste0(ct[1], "; ", ct[2]),
                  paste0(dt[1], "; ", dt[2]))
       nas <- c(sum(is.na(WS$Age)),
-               sum(is.na(WS$Temp)),
                sum(is.na(WS$Heart.Rate)),
                sum(is.na(WS$MUAC)),
                sum(is.na(WS$Oxy.Sat)),
@@ -480,18 +471,18 @@ server <- function(input, output, session) {
 
   get_model <-reactive({
     if(is.null(input$dataset) & !input$input_submit) { return(NULL) }
-    MRCmodel <- readRDS(file="MRCmodel2020x.rds")
+    MRCmodel <- readRDS(file="MRCmodel2021.rds")
     return(MRCmodel)
   })
 
   make_pred <- reactive({
     WS <- get_WSclean()
     #caret.model <- get_model()
-    model_data <- get_model() #readRDS(file="MRCmodel2020x.rds")
+    model_data <- get_model() #readRDS(file="MRCmodel2021.rds")
     caret.model <- model_data$caret.model
     best_thresh <- model_data$best_thresh
     
-    WSb <- WS; WSb$Convulsions <- as.numeric(WSb$Convulsions)-1
+    WSb <- WS; WSb$Lethargy <- as.numeric(WSb$Lethargy)-1
     predicted_p <- predict.train(caret.model, newdata = WSb, type="prob")
     predictions <- as.numeric(predicted_p[,2] > best_thresh$threshold)
     
@@ -500,15 +491,14 @@ server <- function(input, output, session) {
   
 
   make_single_pred <- eventReactive(input$input_submit, {
-    model_data <- get_model() #readRDS(file="MRCmodel2020x.rds")
+    model_data <- get_model() #readRDS(file="MRCmodel2021.rds")
     caret.model <- model_data$caret.model
     best_thresh <- model_data$best_thresh
     dataline <- data.frame(Age = input$input_Age,
-                           Temp = input$input_Temp,
                            Heart.Rate = input$input_HR,
                            MUAC = input$input_MUAC,
                            Oxy.Sat = input$input_OxySat,
-                           Convulsions = as.numeric(input$input_Convulsions))
+                           Lethargy = as.numeric(input$input_Lethargy))
     predicted_p <- predict.train(caret.model, newdata = dataline, type="prob")
     predictions <- as.numeric(predicted_p[2] > best_thresh$threshold)
     levels_predictions <- c("Low risk", "High risk")
@@ -555,9 +545,9 @@ server <- function(input, output, session) {
       #scale_fill_discrete(name = "Real outcome", labels = c("Alive", "Dead")) +
       theme_bw() + 
       theme(legend.position = "bottom") +
-      annotate("label", x = best_thresh$threshold, y=2.35, label="threshold") +
-      annotate("text" , x = best_thresh$threshold-0.01, y=2.2, label="Alive", hjust="right") +
-      annotate("text" , x = best_thresh$threshold+0.01, y=2.2, label="Dead", hjust="left")
+      annotate("label", x = best_thresh$threshold, y=3.35, label="threshold") +
+      annotate("text" , x = best_thresh$threshold-0.01, y=3.0, label="Alive", hjust="right") +
+      annotate("text" , x = best_thresh$threshold+0.01, y=3.0, label="Dead", hjust="left")
     return(densiplot)
   })
     
@@ -573,9 +563,9 @@ server <- function(input, output, session) {
       #scale_fill_discrete(name = "Real outcome", labels = c("Alive", "Dead")) +
       theme_bw() + scale_fill_grey(name = "Real outcome", labels = c("Alive", "Dead")) + 
       theme(legend.position = "bottom") +
-      annotate("label", x = best_thresh$threshold, y=2.35, label="threshold") +
-      annotate("text" , x = best_thresh$threshold-0.01, y=2.2, label="Alive", hjust="right") +
-      annotate("text" , x = best_thresh$threshold+0.01, y=2.2, label="Dead", hjust="left")
+      annotate("label", x = best_thresh$threshold, y=3.35, label="threshold") +
+      annotate("text" , x = best_thresh$threshold-0.01, y=3.0, label="Alive", hjust="right") +
+      annotate("text" , x = best_thresh$threshold+0.01, y=3.0, label="Dead", hjust="left")
     return(densiplot)
   })
 
